@@ -1,5 +1,10 @@
 # LeadCash: AI Lead-to-Cash Automation (n8n)
-
+## Demo videos
+1. Workflow canvas: [https://drive.google.com/file/d/1jkpO-FBg95oOE3QL69gEXdtj2zjOtYHk/view?usp=drivesdk]
+2. Price question: [https://drive.google.com/file/d/1v08mbIScAEmOw6cX1_jn-gwCuRbH9_75/view?usp=drivesdk]
+3. Booking request: [https://drive.google.com/file/d/12p-0uyQJ8D5IYjQyAkofpMu71XPg4VNP/view?usp=drivesdk]
+4. Booking saved to sheet: [https://drive.google.com/file/d/1dTGuM6hrnmDe4R8u5ejdh0MgdMa-zBKR/view?usp=drivesdk]
+  
 A demo automation built for a fictional web agency. It captures leads, scores them with AI, routes them, follows up, and creates invoices when a deal is won.
 
 Built on free tiers. Every tool can be swapped for a paid one.
