@@ -1,0 +1,579 @@
+{
+  "name": "WF4 - Follow-up Sequence",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        160,
+        -16
+      ],
+      "id": "526c9ded-50fb-45bd-a405-dd13484a7abd",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U",
+          "mode": "list",
+          "cachedResultName": "LeadCash_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 765983800,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit#gid=765983800"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "nurture"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        -16
+      ],
+      "id": "d00c68df-4bb8-4c3b-aa03-0748c4719aa0",
+      "name": "Get Nurture Leads",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "16fe4590-fd48-4cf7-b19c-8af4b3301a2f",
+              "leftValue": "={{ Number($json.followup_step) < 3 && new Date($json.next_followup_date) <= new Date() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        -16
+      ],
+      "id": "7567e998-a417-445a-aa39-a34e72700fa1",
+      "name": " Filter Due Leads"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        832,
+        -16
+      ],
+      "id": "96e11738-2c3f-47fb-b433-825cfd7e9423",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.5
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1136,
+        96
+      ],
+      "id": "8985f0a9-1860-442d-bdcb-d915d857f74f",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a short, friendly follow-up email under 100 words. Lead name: {{ $json.name }}. Company: {{ $json.company }}. Their original message: {{ $json.message }}. This is follow-up number {{ Number($json.followup_step) + 1 }} of 3. Tone: follow-up 1 shares one helpful idea, follow-up 2 gives a quick example of how automation saves time, follow-up 3 is a polite last check-in. Include this booking link: https://cal.com/gaurav-miglani-mkzydf/15min. Sign off as Alex from LeadCash Demo. Add a final line: Reply STOP to unsubscribe. Return only the email body in plain text, no subject line.",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1056,
+        -144
+      ],
+      "id": "60efe9ee-9f3a-42c9-9d3f-faa89bda115c",
+      "name": "Draft Follow-up",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Loop Over Items').item.json.email }}",
+        "subject": "Quick follow-up from LeadCash Demo",
+        "emailType": "text",
+        "message": "={{ $('Draft Follow-up').item.json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        -144
+      ],
+      "id": "18944456-27d7-4179-aa3b-85ff00061e76",
+      "name": "Send Follow-up",
+      "webhookId": "336d3ef6-db46-4eaa-9ea2-b5397e21ade0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NTeoRbbsLsjgQpSK",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U",
+          "mode": "list",
+          "cachedResultName": "LeadCash_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 765983800,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit#gid=765983800"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $('Loop Over Items').item.json.lead_id }}",
+            "followup_step": "={{ Number($('Loop Over Items').item.json.followup_step) + 1 }}",
+            "next_followup_date": "={{ $now.plus({days: 3}).toFormat(\"yyyy-MM-dd\") }}",
+            "status": "={{ Number($('Loop Over Items').item.json.followup_step) + 1 >= 3 ? \"sequence_done\" : \"nurture\" }}"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "company_summary",
+              "displayName": "company_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "tier",
+              "displayName": "tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "reasons",
+              "displayName": "reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "suggested_action",
+              "displayName": "suggested_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "followup_step",
+              "displayName": "followup_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_followup_date",
+              "displayName": "next_followup_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hubspot_contact_id",
+              "displayName": "hubspot_contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "hubspot_deal_id",
+              "displayName": "hubspot_deal_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "invoice_url",
+              "displayName": "invoice_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        -144
+      ],
+      "id": "d7091964-efa6-4140-970d-9b7fe8500eeb",
+      "name": "Update Lead Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1856,
+        -16
+      ],
+      "id": "066b8d55-7eca-4dd1-a9ce-c3521b42b786",
+      "name": "Wait",
+      "webhookId": "8cfe82e5-76d1-452e-aa50-339dd6638f01"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Nurture Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Nurture Leads": {
+      "main": [
+        [
+          {
+            "node": " Filter Due Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Filter Due Leads": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Draft Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Draft Follow-up",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Row": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "HLWSQagQlplX14Pe",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c6775d5e-2dab-4f1f-9e1a-9946452609e1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0db146409bb4fe9e71495f37165844e78c3de56b7f8f56bd849a109ce32e885b"
+  },
+  "nodeGroups": [],
+  "id": "rc9JSn2mp3J2bHd6",
+  "tags": []
+}

@@ -1,0 +1,194 @@
+{
+  "name": "WF3 - Score Lead.",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "name"
+            },
+            {
+              "name": "email"
+            },
+            {
+              "name": "company"
+            },
+            {
+              "name": "message"
+            },
+            {
+              "name": "budget"
+            },
+            {
+              "name": "industry"
+            },
+            {
+              "name": "company_summary"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -256,
+        -32
+      ],
+      "id": "67e56106-6ca4-4425-8c04-e5025b03150b",
+      "name": "Receive Lead"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Name: {{ $json.name }}\nEmail: {{ $json.email }}\nCompany: {{ $json.company }}\nIndustry: {{ $json.industry }}\nCompany summary: {{ $json.company_summary }}\nBudget: {{ $json.budget }}\nMessage: {{ $json.message }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a B2B sales qualification assistant for a web automation agency. Score the lead from 0 to 100. Points: clear and specific need (up to 30), budget fit (up to 25), company looks legitimate and relevant (up to 20), urgency (up to 15), business email domain (up to 10). Be strict. Tier rule: Hot if 75 or more, Warm if 40 to 74, Cold below 40. Return only the requested JSON."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -32,
+        -32
+      ],
+      "id": "aa8ed76a-6f02-4006-9b19-e979c9dd3f1e",
+      "name": "Score Lead",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"score\": 80, \"tier\": \"Hot\", \"reasons\": [\"Clear need\", \"Good budget\", \"Business email\"], \"suggested_action\": \"Book a call within 24 hours\"}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        112,
+        208
+      ],
+      "id": "20ec6383-0efc-4705-b0f2-05f1db764423",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        208
+      ],
+      "id": "14a28f42-f4f0-410b-8afe-37226b003869",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $json.output || {};\nconst lead = $('Receive Lead').item.json;\n\nlet score = Number(out.score);\nif (isNaN(score)) score = 0;\nscore = Math.max(0, Math.min(100, Math.round(score)));\n\nlet tier = 'Cold';\nif (score >= 65) tier = 'Hot';\nelse if (score >= 40) tier = 'Warm';\n\nconst reasons = Array.isArray(out.reasons)\n  ? out.reasons.join('; ')\n  : String(out.reasons || '');\n\nreturn {\n  json: {\n    ...lead,\n    score,\n    tier,\n    reasons,\n    suggested_action: out.suggested_action || ''\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -32
+      ],
+      "id": "94ec17b1-797d-4116-8a51-10ad00506ff9",
+      "name": "Validate and Tier"
+    }
+  ],
+  "pinData": {
+    "Receive Lead": [
+      {
+        "json": {
+          "name": "Rahul Sharma",
+          "email": "rahul@acmeagency.com",
+          "company": "Acme Agency",
+          "message": "We need to automate lead follow-ups and CRM sync within 2 weeks",
+          "budget": "2000-5000",
+          "industry": "Marketing",
+          "company_summary": "Acme Agency is a digital marketing firm serving small businesses."
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Receive Lead": {
+      "main": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Validate and Tier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "BRH2Vi4CYP2szDRv",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "419ca26d-5c5b-4d1f-b166-f5d828488de0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "296a8d6c1130b6eebae17505858bc3bda87080cc161d9d12fb5c6d4f586b42cf"
+  },
+  "nodeGroups": [],
+  "id": "hz47CqCKFinJ5mtr",
+  "tags": []
+}

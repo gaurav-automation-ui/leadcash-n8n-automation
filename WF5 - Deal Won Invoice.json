@@ -1,0 +1,674 @@
+{
+  "name": "WF5 - Deal Won Invoice",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        16
+      ],
+      "id": "7883e17d-94d4-4a87-b6a3-119dcc4f39f3",
+      "name": "Every 15 Min"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U",
+          "mode": "list",
+          "cachedResultName": "LeadCash_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 765983800,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit#gid=765983800"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "won"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        16
+      ],
+      "id": "5a2239b9-b7c2-4f47-b7ca-f3e248fb0c99",
+      "name": "Get Won Leads",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "64d166c7-f822-46d4-8383-4d4dc2f8d648",
+              "leftValue": "={{ $json.invoice_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        16
+      ],
+      "id": "4bf34de2-dd5b-47dc-b40a-237ec9534345",
+      "name": "Filter Not Invoiced"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/customers",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        672,
+        16
+      ],
+      "id": "b9450a01-12eb-4610-9fcb-b6f201207eff",
+      "name": "Stripe Create Customer",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GqFDLW6QOui2MeuG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/invoiceitems",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customer",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "amount",
+              "value": "={{ Number($('Filter Not Invoiced').first().json.deal_amount) * 100 }}"
+            },
+            {
+              "name": "currency",
+              "value": "usd"
+            },
+            {
+              "name": "description",
+              "value": "={{ \"Automation project - \" + $('Filter Not Invoiced').first().json.company }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        16
+      ],
+      "id": "eb34f85c-b4e5-4e3a-aeeb-fd7e0a9ccde8",
+      "name": "Stripe Invoice Item",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GqFDLW6QOui2MeuG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.stripe.com/v1/invoices",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "customer",
+              "value": "={{ $('Stripe Create Customer').first().json.id }}"
+            },
+            {
+              "name": "collection_method",
+              "value": "send_invoice"
+            },
+            {
+              "name": "days_until_due",
+              "value": "7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        16
+      ],
+      "id": "6b6a408f-21ab-451e-a513-45575f5991c2",
+      "name": "Stripe Create Invoice",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GqFDLW6QOui2MeuG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.stripe.com/v1/invoices/{{ $json.id }}/finalize",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1344,
+        16
+      ],
+      "id": "917a6541-a988-4d6b-84e1-626c9c5f69a2",
+      "name": "Stripe Finalize",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GqFDLW6QOui2MeuG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Filter Not Invoiced').first().json.email }}",
+        "subject": "Your invoice from LeadCash Demo",
+        "emailType": "text",
+        "message": "=Hi {{ $('Filter Not Invoiced').first().json.name }}, thank you for choosing us. Your invoice is ready here: {{ $('Stripe Finalize').first().json.hosted_invoice_url }}. It is due in 7 days. Reply to this email if you have any questions. Alex, LeadCash Demo",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        16
+      ],
+      "id": "772eae2b-0eca-4600-8677-acf71bd39bb3",
+      "name": "Send Invoice Email",
+      "webhookId": "d44431a8-7907-4d12-bd3c-575147966bfc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NTeoRbbsLsjgQpSK",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U",
+          "mode": "list",
+          "cachedResultName": "LeadCash_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 765983800,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit#gid=765983800"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "lead_id": "={{ $('Filter Not Invoiced').first().json.lead_id }}",
+            "invoice_url": "={{ $('Stripe Finalize').first().json.hosted_invoice_url }}",
+            "status": "won_invoiced"
+          },
+          "matchingColumns": [
+            "lead_id"
+          ],
+          "schema": [
+            {
+              "id": "lead_id",
+              "displayName": "lead_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "received_at",
+              "displayName": "received_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "budget",
+              "displayName": "budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company_summary",
+              "displayName": "company_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tier",
+              "displayName": "tier",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "reasons",
+              "displayName": "reasons",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "suggested_action",
+              "displayName": "suggested_action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "followup_step",
+              "displayName": "followup_step",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "next_followup_date",
+              "displayName": "next_followup_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hubspot_contact_id",
+              "displayName": "hubspot_contact_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "hubspot_deal_id",
+              "displayName": "hubspot_deal_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "invoice_url",
+              "displayName": "invoice_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "deal_amount",
+              "displayName": "deal_amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        16
+      ],
+      "id": "e76eef57-9e7a-46c8-ac47-8ab08cb611a7",
+      "name": "Update Invoice Row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "7500136420",
+        "text": "=Deal won: {{ $('Filter Not Invoiced').first().json.company }}. Invoice sent: {{ $('Stripe Finalize').first().json.hosted_invoice_url }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1952,
+        16
+      ],
+      "id": "6aeec8ca-b76c-43f4-b490-52ac2c077cf3",
+      "name": "Notify Deal Won",
+      "webhookId": "9076461a-1add-4eca-be62-94e19f6a3c03",
+      "credentials": {
+        "telegramApi": {
+          "id": "cPfGsAjWDeVUEfva",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15 Min": {
+      "main": [
+        [
+          {
+            "node": "Get Won Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Won Leads": {
+      "main": [
+        [
+          {
+            "node": "Filter Not Invoiced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Not Invoiced": {
+      "main": [
+        [
+          {
+            "node": "Stripe Create Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Create Customer": {
+      "main": [
+        [
+          {
+            "node": "Stripe Invoice Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Invoice Item": {
+      "main": [
+        [
+          {
+            "node": "Stripe Create Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Create Invoice": {
+      "main": [
+        [
+          {
+            "node": "Stripe Finalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe Finalize": {
+      "main": [
+        [
+          {
+            "node": "Send Invoice Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Invoice Email": {
+      "main": [
+        [
+          {
+            "node": "Update Invoice Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Invoice Row": {
+      "main": [
+        [
+          {
+            "node": "Notify Deal Won",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "HLWSQagQlplX14Pe",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "aa44cd73-9d55-4d48-bbe1-606c4b80a6f2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0db146409bb4fe9e71495f37165844e78c3de56b7f8f56bd849a109ce32e885b"
+  },
+  "nodeGroups": [],
+  "id": "rViQMDsckDUK6p7z",
+  "tags": []
+}

@@ -1,0 +1,626 @@
+{
+  "name": "Business Support Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -64,
+        -544
+      ],
+      "id": "218b9bc7-fad5-412f-886c-c98ee3f9d464",
+      "name": "Telegram Input",
+      "webhookId": "64e01174-1945-483a-83d2-891e5679c8bd",
+      "credentials": {
+        "telegramApi": {
+          "id": "feIyAsqLWDdUXkCC",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "ca03b4dd-fb42-4419-a282-28ce00701c33",
+              "leftValue": "={{ !!$json.message.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        160,
+        -544
+      ],
+      "id": "2f2c338c-00b9-4781-9662-4dd21fb9d72d",
+      "name": "Has Text?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Input').item.json.message.chat.id }}",
+        "text": "I can only understand text messages right now. Please send your question as text.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        384,
+        -448
+      ],
+      "id": "92239808-71db-4251-ac4f-263b704d8753",
+      "name": "Ask For Text",
+      "webhookId": "fac75c5f-a70a-41d0-9c17-559f4882d807",
+      "credentials": {
+        "telegramApi": {
+          "id": "feIyAsqLWDdUXkCC",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "920edd49-fe4f-4e7a-8f2e-cba81efdfeb8",
+              "name": "chat_id",
+              "value": "={{ $json.message.chat.id }}",
+              "type": "string"
+            },
+            {
+              "id": "5463c35e-0535-4a43-b70e-fa0f02f9a7d9",
+              "name": "customer_text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        384,
+        -640
+      ],
+      "id": "a31f0812-d0d2-408c-93be-c6c7a563fe20",
+      "name": "Prepare Message"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        -416
+      ],
+      "id": "fb9a3cdc-080e-4e9d-87bd-2b829d48889f",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": null,
+          "name": "",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Prepare Message').item.json.customer_text }}",
+        "options": {
+          "systemMessage": "=Current date: {{ $now.format('yyyy-MM-dd') }}. Tomorrow is {{ $now.plus({days: 1}).format('yyyy-MM-dd') }}. This date is correct. Ignore any other date you think is current. Never guess the year or date.\n\nYou are a friendly support assistant for a small nail studio. Answer questions about services, prices and durations politely and briefly, in 3 sentences or less. Use the get_prices tool to check prices before quoting any price. Never make up prices or availability.\n\nIf a customer wants to book, collect their name, service, date and time, one question at a time. Do not call any booking tool.\n\nWhen you have the customer's name, service, date and time, reply with exactly one line in this format and nothing else: BOOKING_READY | name | service | date | time\n\nCall each tool at most once per message. After getting a tool result, reply to the customer in plain text. If you are not sure about something, say a team member will reply soon.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        -640
+      ],
+      "id": "7c05c97e-058f-40e1-9e11-564f80a6f6d5",
+      "name": "Support Agent",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Use this to get the list of services with prices and durations. Always check this before quoting any price.",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y",
+          "mode": "list",
+          "cachedResultName": "NailStudio_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        752,
+        -416
+      ],
+      "id": "e94bbf4a-42f8-419e-b919-bbfbf11a49b5",
+      "name": "get_prices",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Prepare Message').item.json.chat_id }}",
+        "text": "={{ $json.reply.replace(/_/g, \" \") }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        -544
+      ],
+      "id": "93122c58-5f8e-4741-99a0-8b758b794965",
+      "name": "Send Reply",
+      "webhookId": "ff4f7d1f-fa85-47ef-95e0-3efe9fff0835",
+      "credentials": {
+        "telegramApi": {
+          "id": "feIyAsqLWDdUXkCC",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3c36b02e-4ba4-4497-8304-e3f49c0e190d",
+              "name": "reply",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "914ac4c3-a832-45f3-91d6-45516d987f4b",
+              "name": "is_booking",
+              "value": "={{ $json.output.includes(\"BOOKING\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        960,
+        -640
+      ],
+      "id": "31de139d-f600-4ca9-9afd-4cceb3c6b26a",
+      "name": "Debug Reply"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "310ee15f-3dc3-4964-aae4-76d5671567f4",
+              "leftValue": "={{ $json.is_booking }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1184,
+        -640
+      ],
+      "id": "2fd585fd-7453-4e9c-9b8f-e397ff9a44f6",
+      "name": "Is Booking Ready?"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f9341a0c-606f-4040-b5f0-cb63a815430d",
+              "name": "name",
+              "value": "={{ $json.reply.split(\"|\")[1].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "2035b540-1657-4e82-b9c7-bbafd4cab5ca",
+              "name": "service",
+              "value": "={{ $json.reply.split(\"|\")[2].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "30551973-c883-4624-a451-f9b8872c37eb",
+              "name": "date",
+              "value": "={{ $json.reply.split(\"|\")[3].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "b58e20dd-9ac8-4ff1-8075-f44464d2d32d",
+              "name": "time",
+              "value": "={{ $json.reply.split(\"|\")[4].trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "a288d04b-e7d5-4020-b998-e5f08df5d672",
+              "name": "chat_id",
+              "value": "={{ $('Prepare Message').item.json.chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1408,
+        -736
+      ],
+      "id": "fed504b6-8330-4b61-a48a-d7068c4a27be",
+      "name": "Parse Booking"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y",
+          "mode": "list",
+          "cachedResultName": "NailStudio_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 963117523,
+          "mode": "list",
+          "cachedResultName": "Bookings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Ab7K2JJI5F5mVF_HmO_qnX4Wi1lDHvydUGf-NJZns0Y/edit#gid=963117523"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "booking_id": "={{ $now.toMillis() }}",
+            "customer_name": "={{ $json.name }}",
+            "chat_id": "={{ $json.chat_id }}",
+            "service": "={{ $json.service }}",
+            "date": "={{ $json.date }}",
+            "time": "={{ $json.time }}",
+            "status": "confirmed"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "booking_id",
+              "displayName": "booking_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "customer_name",
+              "displayName": "customer_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "service",
+              "displayName": "service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1632,
+        -736
+      ],
+      "id": "e02c52e6-6679-4120-b6ee-5783af90d6c3",
+      "name": "Save Booking",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "epIwR8CiCIY4iD3M",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parse Booking').item.json.chat_id }}",
+        "text": "=Booking confirmed for {{ $('Parse Booking').item.json.name }}: {{ $('Parse Booking').item.json.service }} on {{ $('Parse Booking').item.json.date }} at {{ $('Parse Booking').item.json.time }}. See you then!",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1792,
+        -736
+      ],
+      "id": "8f0644d8-a154-4ee3-9470-c677826d378c",
+      "name": "Send a text message",
+      "webhookId": "79d0c3e5-97e3-49ce-b1de-353e553292a9",
+      "credentials": {
+        "telegramApi": {
+          "id": "feIyAsqLWDdUXkCC",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Debug Reply": [
+      {
+        "json": {
+          "reply": "BOOKING_READY | Priya | Bridal nails | 2026-10-30 | 4 PM",
+          "is_booking": "true"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Input": {
+      "main": [
+        [
+          {
+            "node": "Has Text?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Text?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask For Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Message": {
+      "main": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Support Agent": {
+      "main": [
+        [
+          {
+            "node": "Debug Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_prices": {
+      "ai_tool": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reply": {
+      "main": [
+        []
+      ]
+    },
+    "Debug Reply": {
+      "main": [
+        [
+          {
+            "node": "Is Booking Ready?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Booking Ready?": {
+      "main": [
+        [
+          {
+            "node": "Parse Booking",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Booking": {
+      "main": [
+        [
+          {
+            "node": "Save Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Booking": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "HLWSQagQlplX14Pe",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "a23bd610-5a8e-450f-9a97-34b101fb0634",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0db146409bb4fe9e71495f37165844e78c3de56b7f8f56bd849a109ce32e885b"
+  },
+  "nodeGroups": [],
+  "id": "WJWmVfq43lIygUTq",
+  "tags": []
+}

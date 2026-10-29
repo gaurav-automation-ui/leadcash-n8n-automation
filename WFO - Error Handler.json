@@ -1,0 +1,230 @@
+{
+  "name": "WFO - Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1232,
+        16
+      ],
+      "id": "ec78339f-2757-4a99-a84a-916fac686922",
+      "name": "Catch Error"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a2fd4105-2123-47af-b861-bfe3d76f59e2",
+              "name": "workflow",
+              "value": "={{ $json.workflow.name }}",
+              "type": "string"
+            },
+            {
+              "id": "98d1d382-ee90-4655-9d42-d253ae84a0a8",
+              "name": "node",
+              "value": "={{ $json.execution.lastNodeExecuted }}",
+              "type": "string"
+            },
+            {
+              "id": "784ba794-f83d-4c70-9b5b-cd30f1caa31e",
+              "name": "message",
+              "value": "={{ $json.execution.error.messagel }}",
+              "type": "string"
+            },
+            {
+              "id": "3390e7e7-b163-4761-8545-54d629c6b996",
+              "name": "url",
+              "value": "={{ $json.execution.url }}",
+              "type": "string"
+            },
+            {
+              "id": "6d593121-4649-4017-b10f-0a8a65928857",
+              "name": "time",
+              "value": "={{ $now.format('yyyy-MM-dd HH:mm') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1040,
+        16
+      ],
+      "id": "13416976-0a2c-4dc6-be4b-7067937f2a92",
+      "name": "Build Alert"
+    },
+    {
+      "parameters": {
+        "chatId": "7500136420",
+        "text": "=Workflow failed: {{ $json.workflow }} | Node: {{ $json.node }} | Error: {{ $json.message }} | Link: {{ $json.url }}",
+        "additionalFields": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -848,
+        16
+      ],
+      "id": "23914d9d-ddaf-43c6-acbe-ab728604ad25",
+      "name": "Send Telegram Alert",
+      "webhookId": "dccb910b-6e96-4b87-873d-41fa8983e5bc",
+      "credentials": {
+        "telegramApi": {
+          "id": "js5X0nL9w9Co4U8r",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U",
+          "mode": "list",
+          "cachedResultName": "LeadCash_DB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Error_Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13UmLaloK5EX4G4q7D1cyUDQIqkbuXV733TRz_N6bV5U/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "time": "={{ $('Build Alert').item.json.time }}",
+            "workflow": "={{ $('Build Alert').item.json.workflow }}",
+            "node": "={{ $('Build Alert').item.json.node }}",
+            "message": "={{ $('Build Alert').item.json.message }}",
+            "execution_url": "={{ $('Build Alert').item.json.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "time",
+              "displayName": "time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "workflow",
+              "displayName": "workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "node",
+              "displayName": "node",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "execution_url",
+              "displayName": "execution_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -672,
+        16
+      ],
+      "id": "60018bc3-6e81-4e84-acad-d8c66b8787e7",
+      "name": "Log Error to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "NZS8foYDN08AIOEJ",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Catch Error": {
+      "main": [
+        [
+          {
+            "node": "Build Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Alert": {
+      "main": [
+        [
+          {
+            "node": "Log Error to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "2433a167-226e-4fc7-ade9-2819a28c8800",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "296a8d6c1130b6eebae17505858bc3bda87080cc161d9d12fb5c6d4f586b42cf"
+  },
+  "nodeGroups": [],
+  "id": "BRH2Vi4CYP2szDRv",
+  "tags": []
+}
